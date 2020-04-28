@@ -34,14 +34,30 @@ public final class RemoteFeedLoader {
     client.get(from: url) { result in
       switch result {
       case let .success((data, _)):
-        if let _ = try? JSONSerialization.jsonObject(with: data) {
-          completion(.success([]))
-        } else {
+        do {
+          let root = try JSONDecoder().decode(Root.self, from: data)
+          completion(.success(root.items.map { $0.item }))
+        } catch {
           completion(.failure(.invalidData))
         }
       case .failure:
         completion(.failure(.connectivity))
       }
     }
+  }
+}
+
+private struct Root: Decodable {
+  var items: [Item]
+}
+
+private struct Item: Decodable {
+  let id: UUID
+  let description: String?
+  let location: String?
+  let image: URL
+
+  var item: FeedItem {
+    return FeedItem(id: id, description: description, location: location, imageURL: image)
   }
 }
